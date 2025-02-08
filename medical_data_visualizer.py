@@ -3,58 +3,76 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 1
-df = None
+# Import data
+df = pd.read_csv('medical_examination.csv')
 
-# 2
-df['overweight'] = None
+# Determine of a person is overweight
+df['overweight'] = (df['weight'] / (df['height'] * 0.01)**2 > 25).astype(int)
 
-# 3
+# Normalize cholesterol and glucose data
+df['cholesterol'] = df['cholesterol'].apply(lambda x: 0 if x == 1 else 1)
+df['gluc'] = df['gluc'].apply(lambda x: 0 if x == 1 else 1)
 
 
-# 4
+# Bar graph
 def draw_cat_plot():
-    # 5
-    df_cat = None
+    # Create a new DataFrame
+    df_cat = pd.melt(
+        df,
+        id_vars=['cardio'],
+        value_vars=['cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight'],
+        var_name='variable',
+        value_name='value')
 
+    # Group and format DataFrame df_cat
+    df_cat = df_cat.groupby(['cardio', 'variable', 'value']).size().reset_index()
+    df_cat = df_cat.rename(columns={0: 'total'})
 
-    # 6
-    df_cat = None
-    
+    # Create graph
+    fig = sns.catplot(data=df_cat, x='variable', y='total', kind='bar', col='cardio', hue='value')
 
-    # 7
-
-
-
-    # 8
-    fig = None
-
-
-    # 9
+    # Save the graph
     fig.savefig('catplot.png')
-    return fig
+
+    return fig.figure
 
 
-# 10
+# Heat map
 def draw_heat_map():
-    # 11
-    df_heat = None
+    # Calculate the limits
+    height_low, height_high = df['height'].quantile([0.025, 0.975])
+    weight_low, weight_high = df['weight'].quantile([0.025, 0.975])
 
-    # 12
-    corr = None
+    df_heat = df[(df['ap_lo'] <= df['ap_hi']) &
+                 (df['height'].between(height_low, height_high)) &
+                 (df['weight'].between(weight_low, weight_high))]
 
-    # 13
-    mask = None
+    # Calculate correlation
+    corr = df_heat.corr()
 
+    # Generate a mask for the upper triangle
+    mask = np.triu(np.ones_like(corr, dtype=bool))
 
+    # Set up the matplotlib figure
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(12, 8))
 
-    # 14
-    fig, ax = None
+    # Plot the correlation matrix
+    sns.heatmap(
+        corr,
+        mask=mask,
+        cmap='coolwarm',
+        annot=True,
+        fmt='.1f',
+        linewidths=0.5,
+        square=True,
+        ax=ax)
 
-    # 15
-
-
-
-    # 16
+    # Save figure
     fig.savefig('heatmap.png')
     return fig
+
+
+if __name__ == '__main__':
+    draw_cat_plot()
+    draw_heat_map()
